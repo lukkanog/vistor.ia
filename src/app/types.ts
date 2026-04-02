@@ -1,10 +1,13 @@
 export type InspectionType = 'entrada' | 'saida';
 export type InspectionStatus = 'em_andamento' | 'concluida';
+export type ComparisonStatus = 'novo_dano' | 'sem_alteracao' | 'resolvido' | 'modificado';
 
 export interface InspectionItem {
   id: string;
   description: string;
   createdAt: Date;
+  comparisonStatus?: ComparisonStatus;
+  originalDescription?: string;
 }
 
 export interface InspectionRoom {
@@ -25,6 +28,7 @@ export interface Inspection {
   completedAt?: Date;
   rooms: InspectionRoom[];
   currentRoomIndex: number;
+  linkedEntryId?: string;
 }
 
 export const DEFAULT_ROOMS: Omit<InspectionRoom, 'items' | 'photos'>[] = [

@@ -15,7 +15,8 @@ import { Button } from '../components/button';
 import { VoiceRecorder } from '../components/voice-recorder';
 import { PhotoCapture } from '../components/photo-capture';
 import { AIVisionModal } from '../components/ai-vision-modal';
-import { Inspection, InspectionItem } from '../types';
+import { ComparisonReviewModal } from '../components/comparison-review-modal';
+import { Inspection, InspectionItem, ComparisonStatus } from '../types';
 import { InspectionStorage } from '../storage';
 
 export function InspectionDetailPage() {
@@ -27,6 +28,7 @@ export function InspectionDetailPage() {
   const [aiVisionMediaUrl, setAiVisionMediaUrl] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [showComparisonReview, setShowComparisonReview] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -61,11 +63,12 @@ export function InspectionDetailPage() {
       id: Date.now().toString(),
       description,
       createdAt: new Date(),
+      comparisonStatus: inspection.linkedEntryId ? 'novo_dano' as ComparisonStatus : undefined,
     };
 
     const updatedInspection = { ...inspection };
     updatedInspection.rooms[inspection.currentRoomIndex].items.push(newItem);
-    
+
     InspectionStorage.save(updatedInspection);
     setInspection(updatedInspection);
     setShowVoiceRecorder(false);
@@ -80,7 +83,7 @@ export function InspectionDetailPage() {
     if (!aiVisionMediaUrl) return;
 
     const updatedInspection = { ...inspection };
-    
+
     // Add photo/video
     updatedInspection.rooms[inspection.currentRoomIndex].photos.push(aiVisionMediaUrl);
 
@@ -90,6 +93,7 @@ export function InspectionDetailPage() {
         id: Date.now().toString() + index.toString(),
         description: desc,
         createdAt: new Date(),
+        comparisonStatus: inspection.linkedEntryId ? 'novo_dano' as ComparisonStatus : undefined,
       });
     });
 
@@ -102,9 +106,9 @@ export function InspectionDetailPage() {
     if (!confirm('Deseja realmente excluir este item?')) return;
 
     const updatedInspection = { ...inspection };
-    updatedInspection.rooms[inspection.currentRoomIndex].items = 
+    updatedInspection.rooms[inspection.currentRoomIndex].items =
       currentRoom.items.filter(item => item.id !== itemId);
-    
+
     InspectionStorage.save(updatedInspection);
     setInspection(updatedInspection);
   };
@@ -114,13 +118,20 @@ export function InspectionDetailPage() {
     const item = updatedInspection.rooms[inspection.currentRoomIndex].items.find(
       i => i.id === itemId
     );
-    
+
     if (item) {
       item.description = newDescription;
+      if (item.originalDescription) {
+        if (newDescription !== item.originalDescription) {
+          item.comparisonStatus = 'modificado';
+        } else {
+          item.comparisonStatus = 'sem_alteracao';
+        }
+      }
       InspectionStorage.save(updatedInspection);
       setInspection(updatedInspection);
     }
-    
+
     setEditingItem(null);
     setEditText('');
   };
@@ -130,7 +141,7 @@ export function InspectionDetailPage() {
 
     const updatedInspection = { ...inspection };
     updatedInspection.rooms[inspection.currentRoomIndex].photos.splice(photoIndex, 1);
-    
+
     InspectionStorage.save(updatedInspection);
     setInspection(updatedInspection);
   };
@@ -154,18 +165,26 @@ export function InspectionDetailPage() {
   };
 
   const handleFinishInspection = () => {
-    if (!confirm('Deseja finalizar a vistoria? Você ainda poderá visualizá-la depois.')) return;
+    if (inspection.type === 'saida' && inspection.linkedEntryId) {
+      setShowComparisonReview(true);
+      return;
+    }
 
+    if (!confirm('Deseja finalizar a vistoria? Você ainda poderá visualizá-la depois.')) return;
+    performFinalSave();
+  };
+
+  const performFinalSave = () => {
     const updatedInspection = { ...inspection };
     updatedInspection.status = 'concluida';
     updatedInspection.completedAt = new Date();
-    
+
     InspectionStorage.save(updatedInspection);
     navigate(`/vistoria/${inspection.id}/concluida`);
   };
 
   // Get room icon
-  const iconName = currentRoom.icon.split('-').map((word, i) => 
+  const iconName = currentRoom.icon.split('-').map((word, i) =>
     i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word.charAt(0).toUpperCase() + word.slice(1)
   ).join('');
   const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.Home;
@@ -181,7 +200,7 @@ export function InspectionDetailPage() {
           <ArrowLeft className="size-5" />
           <span>Voltar</span>
         </button>
-        
+
         <div className="flex items-center gap-3 mb-4">
           <div className="size-12 rounded-xl bg-white/10 flex items-center justify-center">
             <IconComponent className="size-6" />
@@ -222,7 +241,7 @@ export function InspectionDetailPage() {
           size="lg"
           className="h-24 flex-col"
         >
-          <Mic className="size-8 mb-2" />
+          <Mic className="size-8 mb-1" />
           <span>Descrever por Voz</span>
         </Button>
       </div>
@@ -299,27 +318,77 @@ export function InspectionDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <p className="text-foreground">{item.description}</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <p className={`text-foreground ${item.comparisonStatus === 'resolvido' ? 'line-through opacity-60' : ''}`}>
+                          {item.description}
+                        </p>
+                        {item.comparisonStatus && (
+                          <div className="mt-2 flex gap-2">
+                            {item.comparisonStatus === 'novo_dano' && <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">Novo Dano</span>}
+                            {item.comparisonStatus === 'resolvido' && <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">Resolvido</span>}
+                            {item.comparisonStatus === 'modificado' && <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">Modificado</span>}
+                            {item.comparisonStatus === 'sem_alteracao' && <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Sem Alteração</span>}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingItem(item.id);
+                            setEditText(item.description);
+                          }}
+                          className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                        >
+                          <Edit3 className="size-4 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => {
-                          setEditingItem(item.id);
-                          setEditText(item.description);
-                        }}
-                        className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                      >
-                        <Edit3 className="size-4 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </button>
-                    </div>
+
+                    {/* Action buttons for pre-populated items */}
+                    {item.originalDescription && item.comparisonStatus !== 'resolvido' && (
+                      <div className="flex gap-2 pt-2 border-t border-border/50">
+                        <Button
+                          size="sm"
+                          variant="success"
+                          className="flex-1 text-xs"
+                          onClick={() => {
+                            const updated = { ...inspection };
+                            const i = updated.rooms[inspection.currentRoomIndex].items.find(x => x.id === item.id);
+                            if (i) i.comparisonStatus = 'resolvido';
+                            InspectionStorage.save(updated);
+                            setInspection(updated);
+                          }}
+                        >
+                          <CheckCircle2 className="size-3 mr-1" /> Marcar Resolvido
+                        </Button>
+                      </div>
+                    )}
+                    {item.comparisonStatus === 'resolvido' && (
+                      <div className="flex gap-2 pt-2 border-t border-border/50">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="flex-1 text-xs"
+                          onClick={() => {
+                            const updated = { ...inspection };
+                            const i = updated.rooms[inspection.currentRoomIndex].items.find(x => x.id === item.id);
+                            if (i) i.comparisonStatus = 'sem_alteracao';
+                            InspectionStorage.save(updated);
+                            setInspection(updated);
+                          }}
+                        >
+                          Desfazer Resolução
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -385,6 +454,17 @@ export function InspectionDetailPage() {
           mediaUrl={aiVisionMediaUrl}
           onComplete={handleAiVisionComplete}
           onCancel={() => setAiVisionMediaUrl(null)}
+        />
+      )}
+
+      {showComparisonReview && (
+        <ComparisonReviewModal
+          inspection={inspection}
+          onConfirm={() => {
+            setShowComparisonReview(false);
+            performFinalSave();
+          }}
+          onCancel={() => setShowComparisonReview(false)}
         />
       )}
     </div>
