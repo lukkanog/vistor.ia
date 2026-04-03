@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Plus, Search, Trash2 } from 'lucide-react';
 import { BottomNav } from '../components/bottom-nav';
+import logo from '../../assets/logo.png';
 import { Inspection } from '../types';
 import { InspectionStorage } from '../storage';
 import { Button } from '../components/button';
@@ -31,49 +32,45 @@ export function HomePage() {
     }
   };
 
-  const filteredInspections = inspections.filter(i => 
+  const filteredInspections = inspections.filter(i =>
     filter === 'all' ? true : i.status === filter
   );
 
   return (
     <div className="min-h-screen pb-20 bg-background">
       {/* Header */}
-      <div className="bg-primary text-primary-foreground px-6 pt-12 pb-8">
-        <h1 className="text-3xl mb-2">vistor.ia</h1>
-        <p className="text-primary-foreground/80">
-          Vistorias inteligentes e rápidas
-        </p>
+      <div className="px-6 pt-12 mb-4">
+        <div className="pb-2 border-b-[3px] border-primary w-fit">
+          <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
+        </div>
       </div>
 
       {/* Filters */}
       <div className="px-6 py-4 flex gap-2 overflow-x-auto">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
-            filter === 'all'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-secondary-foreground'
-          }`}
+          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${filter === 'all'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-secondary text-secondary-foreground'
+            }`}
         >
           Todas
         </button>
         <button
           onClick={() => setFilter('em_andamento')}
-          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
-            filter === 'em_andamento'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-secondary-foreground'
-          }`}
+          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${filter === 'em_andamento'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-secondary text-secondary-foreground'
+            }`}
         >
           Em andamento
         </button>
         <button
           onClick={() => setFilter('concluida')}
-          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
-            filter === 'concluida'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-secondary-foreground'
-          }`}
+          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${filter === 'concluida'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-secondary text-secondary-foreground'
+            }`}
         >
           Concluídas
         </button>
@@ -111,20 +108,18 @@ export function HomePage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                          inspection.type === 'entrada'
-                            ? 'bg-success/10 text-success'
-                            : 'bg-warning/10 text-warning'
-                        }`}
+                        className={`inline-block px-2 py-0.5 rounded-full text-xs ${inspection.type === 'entrada'
+                          ? 'bg-success/10 text-success'
+                          : 'bg-warning/10 text-warning'
+                          }`}
                       >
                         {inspection.type === 'entrada' ? 'Entrada' : 'Saída'}
                       </span>
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                          inspection.status === 'em_andamento'
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
+                        className={`inline-block px-2 py-0.5 rounded-full text-xs ${inspection.status === 'em_andamento'
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                          }`}
                       >
                         {inspection.status === 'em_andamento' ? 'Em andamento' : 'Concluída'}
                       </span>
