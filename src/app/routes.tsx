@@ -4,6 +4,7 @@ import { NewInspectionPage } from "./pages/new-inspection";
 import { InspectionDetailPage } from "./pages/inspection-detail";
 import { CompletedPage } from "./pages/completed";
 import { CalendarPage } from "./pages/calendar";
+import { SignaturePortalPage } from "./pages/signature-portal";
 
 export const router = createBrowserRouter([
   {
@@ -25,5 +26,9 @@ export const router = createBrowserRouter([
   {
     path: "/calendario",
     Component: CalendarPage,
+  },
+  {
+    path: "/assinatura/:id/:signatureId",
+    Component: SignaturePortalPage,
   },
 ]);

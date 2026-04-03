@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { CheckCircle2, Home, Download, Share2 } from 'lucide-react';
+import { CheckCircle2, Home, Download, Share2, Plus, Copy, Mail, ShieldAlert } from 'lucide-react';
 import { Button } from '../components/button';
-import { Inspection } from '../types';
+import { Input } from '../components/input';
+import { Inspection, Signature } from '../types';
 import { InspectionStorage } from '../storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -11,6 +12,9 @@ export function CompletedPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [inspection, setInspection] = useState<Inspection | null>(null);
+  const [newSignerName, setNewSignerName] = useState('');
+  const [newSignerEmail, setNewSignerEmail] = useState('');
+  const [newSignerRole, setNewSignerRole] = useState('Locatário');
 
   useEffect(() => {
     if (id) {
@@ -244,6 +248,84 @@ export function CompletedPage() {
               )}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Forms and Signatures */}
+      <div className="px-6 mb-6">
+        <h3 className="mb-3">Signatários Digitais</h3>
+        
+        {inspection.signatures && inspection.signatures.length > 0 && (
+          <div className="space-y-3 mb-4">
+            {inspection.signatures.map(sig => {
+              const link = `${window.location.origin}/assinatura/${inspection.id}/${sig.id}`;
+              return (
+                <div key={sig.id} className="bg-card border border-border p-4 rounded-xl">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-medium">{sig.name}</p>
+                      <p className="text-xs text-muted-foreground">{sig.role} • {sig.email}</p>
+                    </div>
+                    {sig.status === 'assinado' && <span className="bg-success/10 text-success text-xs px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 className="size-3" /> Assinado</span>}
+                    {sig.status === 'recusado' && <span className="bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full flex items-center gap-1"><ShieldAlert className="size-3" /> Recusado</span>}
+                    {sig.status === 'pendente' && <span className="bg-warning/10 text-warning text-xs px-2 py-0.5 rounded-full">Pendente</span>}
+                  </div>
+                  
+                  {sig.status !== 'assinado' && (
+                    <div className="flex gap-2 pt-2 border-t border-border mt-2">
+                      <Button size="sm" variant="secondary" className="flex-1 text-xs" onClick={() => {
+                        navigator.clipboard.writeText(link);
+                        alert('Link copiado para a área de transferência!');
+                      }}>
+                        <Copy className="size-3 mr-1" /> Copiar Link
+                      </Button>
+                      <Button size="sm" variant="secondary" className="flex-1 text-xs" onClick={() => {
+                        alert(`E-mail simulado enviado para ${sig.email}`);
+                      }}>
+                        <Mail className="size-3 mr-1" /> Enviar Email
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="bg-card border border-primary/20 p-4 rounded-xl border-dashed">
+          <p className="text-sm font-medium mb-3">Adicionar Signatário</p>
+          <div className="space-y-3">
+            <Input placeholder="Nome completo" value={newSignerName} onChange={e => setNewSignerName(e.target.value)} />
+            <Input placeholder="E-mail" value={newSignerEmail} onChange={e => setNewSignerEmail(e.target.value)} type="email" />
+            <select
+              value={newSignerRole}
+              onChange={(e) => setNewSignerRole(e.target.value)}
+              className="w-full p-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="Locatário">Locatário</option>
+              <option value="Locador">Locador</option>
+              <option value="Fiador">Fiador</option>
+              <option value="Corretor">Corretor / Vistoriador</option>
+            </select>
+            <Button className="w-full" disabled={!newSignerName || !newSignerEmail} onClick={() => {
+              if (!newSignerName || !newSignerEmail) return;
+              const newSig: Signature = {
+                id: `sig-${Date.now()}`,
+                name: newSignerName,
+                email: newSignerEmail,
+                role: newSignerRole,
+                status: 'pendente'
+              };
+              const updated = { ...inspection, signatures: [...(inspection.signatures || []), newSig] };
+              InspectionStorage.save(updated);
+              setInspection(updated);
+              setNewSignerName('');
+              setNewSignerEmail('');
+            }}>
+              <Plus className="size-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
         </div>
       </div>
 

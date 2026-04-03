@@ -1,6 +1,17 @@
 export type InspectionType = 'entrada' | 'saida';
 export type InspectionStatus = 'em_andamento' | 'concluida';
 export type ComparisonStatus = 'novo_dano' | 'sem_alteracao' | 'resolvido' | 'modificado';
+export type SignatureStatus = 'pendente' | 'assinado' | 'recusado';
+
+export interface Signature {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  status: SignatureStatus;
+  signatureDataUrl?: string;
+  signedAt?: Date;
+}
 
 export interface InspectionItem {
   id: string;
@@ -29,6 +40,7 @@ export interface Inspection {
   rooms: InspectionRoom[];
   currentRoomIndex: number;
   linkedEntryId?: string;
+  signatures?: Signature[];
 }
 
 export const DEFAULT_ROOMS: Omit<InspectionRoom, 'items' | 'photos'>[] = [
