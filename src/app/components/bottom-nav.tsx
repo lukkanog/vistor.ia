@@ -1,4 +1,4 @@
-import { Home, Plus, List } from 'lucide-react';
+import { Home, Plus, Calendar } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import { cn } from '../../lib/utils';
 
@@ -34,14 +34,14 @@ export function BottomNav() {
         </Link>
 
         <Link
-          to="/"
+          to="/calendario"
           className={cn(
             'flex flex-col items-center gap-1 px-6 py-2 transition-colors',
-            'text-muted-foreground'
+            isActive('/calendario') ? 'text-primary' : 'text-muted-foreground'
           )}
         >
-          <List className="size-5" />
-          <span className="text-xs">Histórico</span>
+          <Calendar className="size-5" />
+          <span className="text-xs">Calendário</span>
         </Link>
       </div>
     </nav>

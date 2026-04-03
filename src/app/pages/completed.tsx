@@ -51,50 +51,103 @@ export function CompletedPage() {
     }
   };
 
-  const handleDownload = () => {
-    // Generate a simple text report
-    let report = `RELATÓRIO DE VISTORIA - vistor.ia\n\n`;
-    report += `Imóvel: ${inspection.propertyAddress}\n`;
-    report += `Tipo: ${inspection.type === 'entrada' ? 'Entrada' : 'Saída'}\n`;
-    report += `Data: ${format(inspection.createdAt, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}\n`;
-    if (inspection.completedAt) {
-      report += `Concluída em: ${format(inspection.completedAt, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}\n`;
-    }
-    report += `\n${'='.repeat(50)}\n\n`;
-
-    inspection.rooms.forEach((room) => {
-      report += `${room.name.toUpperCase()}\n`;
-      report += `-`.repeat(room.name.length) + `\n\n`;
+  const handleDownload = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default;
       
-      if (room.items.length === 0) {
-        report += `✓ Nenhum problema encontrado\n\n`;
-      } else {
-        room.items.forEach((item, index) => {
-          report += `${index + 1}. ${item.description}\n`;
+      const doc = new jsPDF();
+      
+      try {
+        const logoUrl = new URL('../../assets/logo.png', import.meta.url).href;
+        const img = new Image();
+        img.src = logoUrl;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
         });
-        report += `\n`;
+        const ratio = img.width / img.height;
+        const h = 14;
+        const w = h * ratio;
+        doc.addImage(img, 'PNG', 14, 10, w, h);
+      } catch (e) {
+        console.warn("Could not load logo for PDF", e);
       }
       
-      if (room.photos.length > 0) {
-        report += `📷 ${room.photos.length} foto(s) anexada(s)\n\n`;
+      doc.setFontSize(20);
+      doc.setTextColor(0, 166, 75); // #00A64B
+      doc.text('Relatório de Vistoria', 14, 38);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(50, 50, 50);
+      doc.text(`Imóvel: ${inspection.propertyAddress}`, 14, 48);
+      doc.text(`Tipo: ${inspection.type === 'entrada' ? 'Entrada' : 'Saída'}`, 14, 54);
+      doc.text(`Data: ${format(inspection.createdAt, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 60);
+      if (inspection.completedAt) {
+        doc.text(`Concluída em: ${format(inspection.completedAt, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 66);
       }
-    });
-
-    if (inspection.notes) {
-      report += `\nOBSERVAÇÕES GERAIS\n`;
-      report += `=`.repeat(20) + `\n`;
-      report += `${inspection.notes}\n`;
+      
+      let currentY = 76;
+      
+      inspection.rooms.forEach((room) => {
+        autoTable(doc, {
+          startY: currentY,
+          head: [[room.name.toUpperCase()]],
+          theme: 'grid',
+          headStyles: { fillColor: [0, 166, 75], textColor: 255 },
+          margin: { bottom: 0 },
+        });
+        
+        currentY = (doc as any).lastAutoTable.finalY + 1;
+        
+        if (room.items.length === 0) {
+          autoTable(doc, {
+            startY: currentY,
+            body: [['Nenhum problema encontrado']],
+            theme: 'plain',
+            styles: { textColor: [0, 150, 0] }
+          });
+          currentY = (doc as any).lastAutoTable.finalY + 2;
+        } else {
+          const bodyData = room.items.map((item, index) => [`${index + 1}`, item.description]);
+          autoTable(doc, {
+            startY: currentY,
+            head: [['#', 'Descrição do Problema']],
+            body: bodyData,
+            theme: 'striped',
+            headStyles: { fillColor: [240, 240, 240], textColor: [50, 50, 50] },
+            columnStyles: { 0: { cellWidth: 10 } }
+          });
+          currentY = (doc as any).lastAutoTable.finalY + 2;
+        }
+        
+        if (room.photos.length > 0) {
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          currentY += 4;
+          doc.text(`${room.photos.length} foto(s) registrada(s)`, 14, currentY);
+          currentY += 2;
+        }
+        
+        currentY += 8;
+      });
+      
+      if (inspection.notes) {
+        autoTable(doc, {
+          startY: currentY,
+          head: [['OBSERVAÇÕES GERAIS']],
+          body: [[inspection.notes]],
+          theme: 'plain',
+          headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] }
+        });
+      }
+      
+      doc.save(`vistoria-${inspection.id}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate PDF', err);
+      alert('Erro ao gerar PDF da vistoria.');
     }
-
-    const blob = new Blob([report], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `vistoria-${inspection.id}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (

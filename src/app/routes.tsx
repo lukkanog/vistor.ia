@@ -3,6 +3,7 @@ import { HomePage } from "./pages/home";
 import { NewInspectionPage } from "./pages/new-inspection";
 import { InspectionDetailPage } from "./pages/inspection-detail";
 import { CompletedPage } from "./pages/completed";
+import { CalendarPage } from "./pages/calendar";
 
 export const router = createBrowserRouter([
   {
@@ -20,5 +21,9 @@ export const router = createBrowserRouter([
   {
     path: "/vistoria/:id/concluida",
     Component: CompletedPage,
+  },
+  {
+    path: "/calendario",
+    Component: CalendarPage,
   },
 ]);
