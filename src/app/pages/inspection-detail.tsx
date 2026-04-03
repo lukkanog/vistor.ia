@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Trash2,
   Edit3,
+  MapPin,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '../components/button';
@@ -29,17 +30,32 @@ export function InspectionDetailPage() {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [showComparisonReview, setShowComparisonReview] = useState(false);
+  const [mapVerified, setMapVerified] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (id) {
       const data = InspectionStorage.getById(id);
       if (data) {
         setInspection(data);
+        verifyAddress(data.propertyAddress);
       } else {
         navigate('/');
       }
     }
   }, [id, navigate]);
+
+  const verifyAddress = async (address: string) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`);
+      const results = await response.json();
+      if (results && results.length > 0) {
+        setMapVerified(true);
+      }
+    } catch (e) {
+      console.error("Geocoding check failed", e);
+    }
+  };
 
   if (!inspection) {
     return (
@@ -193,13 +209,38 @@ export function InspectionDetailPage() {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-6 pt-12 pb-6">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 mb-4 -ml-2 p-2 hover:bg-white/10 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="size-5" />
-          <span>Voltar</span>
-        </button>
+        <div className="flex justify-between items-start mb-4">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 -ml-2 p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="size-5" />
+            <span>Voltar</span>
+          </button>
+
+          {mapVerified && (
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className="flex items-center gap-1.5 p-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+            >
+              <MapPin className="size-4" />
+              {showMap ? 'Ocultar Mapa' : 'Ver Mapa'}
+            </button>
+          )}
+        </div>
+
+        {showMap && (
+          <div className="mb-6 bg-card rounded-xl overflow-hidden shadow-lg animate-in fade-in slide-in-from-top-4">
+            <iframe
+              width="100%"
+              height="200"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(inspection.propertyAddress)}&output=embed`}
+            />
+          </div>
+        )}
 
         <div className="flex items-center gap-3 mb-4">
           <div className="size-12 rounded-xl bg-white/10 flex items-center justify-center">
