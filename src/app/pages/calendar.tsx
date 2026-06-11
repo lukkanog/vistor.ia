@@ -228,15 +228,21 @@ export function CalendarPage() {
               Irá agendar automaticamente para: {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                placeholder="Endereço do imóvel..."
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSchedule();
-                }}
-              />
-              <Button onClick={handleSchedule} disabled={!newAddress.trim()} className="mt-2 sm:mt-0">
+              <div className="min-w-0 flex-1">
+                <Input
+                  placeholder="Endereço do imóvel..."
+                  value={newAddress}
+                  onChange={(e) => setNewAddress(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSchedule();
+                  }}
+                />
+              </div>
+              <Button
+                onClick={handleSchedule}
+                disabled={!newAddress.trim()}
+                className="w-full sm:w-auto sm:shrink-0"
+              >
                 Adicionar
               </Button>
             </div>

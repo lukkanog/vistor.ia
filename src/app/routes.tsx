@@ -1,12 +1,28 @@
 import { createBrowserRouter } from "react-router";
 import { HomePage } from "./pages/home";
+import { LoginPage } from "./pages/login";
+import { InspectionsPage } from "./pages/inspections";
 import { NewInspectionPage } from "./pages/new-inspection";
 import { InspectionDetailPage } from "./pages/inspection-detail";
 import { CompletedPage } from "./pages/completed";
 import { CalendarPage } from "./pages/calendar";
 import { SignaturePortalPage } from "./pages/signature-portal";
+import { ForgotPasswordPage } from "./pages/forgot-password";
+import { RegisterPage } from "./pages/register";
 
 export const router = createBrowserRouter([
+  {
+    path: "/login",
+    Component: LoginPage,
+  },
+  {
+    path: "/recuperar-senha",
+    Component: ForgotPasswordPage,
+  },
+  {
+    path: "/cadastro",
+    Component: RegisterPage,
+  },
   {
     path: "/",
     Component: HomePage,
@@ -14,6 +30,10 @@ export const router = createBrowserRouter([
   {
     path: "/nova-vistoria",
     Component: NewInspectionPage,
+  },
+  {
+    path: "/vistorias",
+    Component: InspectionsPage,
   },
   {
     path: "/vistoria/:id",
