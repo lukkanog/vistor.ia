@@ -4,6 +4,7 @@ import { LockKeyhole, Mail } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { Button } from '../components/button';
 import { Input } from '../components/input';
+import { AccountStorage } from '../account-storage';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export function LoginPage() {
 
     if (!email.trim() || !password.trim()) return;
 
+    AccountStorage.update({ email: email.trim() });
     navigate('/');
   };
 

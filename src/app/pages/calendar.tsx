@@ -9,6 +9,7 @@ import { ChevronRight, Plus, Calendar as CalendarIcon, Trash2 } from 'lucide-rea
 import { format, isSameDay, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BottomNav } from '../components/bottom-nav';
+import { AccountMenu } from '../components/account-menu';
 
 export function CalendarPage() {
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -86,8 +87,13 @@ export function CalendarPage() {
   return (
     <div className="min-h-screen pb-20 bg-background">
       <div className="bg-primary text-primary-foreground px-6 pt-12 pb-8">
-        <h1 className="text-3xl font-medium mb-1">Calendário</h1>
-        <p className="text-primary-foreground/80">Histórico de vistorias</p>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <h1 className="text-3xl font-medium mb-1">Calendário</h1>
+            <p className="text-primary-foreground/80">Histórico de vistorias</p>
+          </div>
+          <AccountMenu />
+        </div>
       </div>
 
       <div className="px-4 py-6">

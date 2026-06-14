@@ -2,6 +2,7 @@ export type InspectionType = 'entrada' | 'saida';
 export type InspectionStatus = 'em_andamento' | 'concluida';
 export type ComparisonStatus = 'novo_dano' | 'sem_alteracao' | 'resolvido' | 'modificado';
 export type SignatureStatus = 'pendente' | 'assinado' | 'recusado';
+export type SubscriptionPlanId = 'basic' | 'pro' | 'premium';
 
 export interface Signature {
   id: string;
@@ -42,6 +43,59 @@ export interface Inspection {
   linkedEntryId?: string;
   signatures?: Signature[];
 }
+
+export interface SubscriptionPlan {
+  id: SubscriptionPlanId;
+  name: string;
+  monthlyPrice: number;
+  description: string;
+  features: string[];
+}
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  company: string;
+  role: string;
+  photoDataUrl?: string;
+  selectedPlanId: SubscriptionPlanId;
+}
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'basic',
+    name: 'Basic',
+    monthlyPrice: 299.9,
+    description: 'Vistoria + docs + laudo + armazenamento padrão',
+    features: [
+      'Vistoria digital completa',
+      'Documentos e laudo',
+      'Armazenamento padrão',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    monthlyPrice: 499.9,
+    description: 'Basic + agenda/roteiro + IA Fotos',
+    features: [
+      'Tudo do Basic',
+      'Agenda e roteiro operacional',
+      'IA para análise de fotos',
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    monthlyPrice: 799.9,
+    description: 'Pro + SLA + IA Fotos + vídeos',
+    features: [
+      'Tudo do Pro',
+      'SLA prioritário',
+      'IA para fotos e vídeos',
+    ],
+  },
+];
 
 export const DEFAULT_ROOMS: Omit<InspectionRoom, 'items' | 'photos'>[] = [
   { id: 'sala', name: 'Sala', icon: 'sofa' },

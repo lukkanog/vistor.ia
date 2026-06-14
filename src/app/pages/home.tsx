@@ -14,6 +14,7 @@ import {
   Signature,
 } from 'lucide-react';
 import { BottomNav } from '../components/bottom-nav';
+import { AccountMenu } from '../components/account-menu';
 import logo from '../../assets/logo.png';
 import { Inspection } from '../types';
 import { InspectionStorage } from '../storage';
@@ -99,8 +100,11 @@ export function HomePage() {
     <div className="min-h-screen pb-20 bg-background">
       {/* Header */}
       <div className="px-6 pt-12 pb-6 bg-primary text-primary-foreground">
-        <div className="pb-2 border-b-[3px] border-white/40 w-fit mb-4">
-          <img src={logo} alt="Logo" className="h-12 w-auto object-contain brightness-0 invert" />
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="pb-2 border-b-[3px] border-white/40 w-fit">
+            <img src={logo} alt="Logo" className="h-12 w-auto object-contain brightness-0 invert" />
+          </div>
+          <AccountMenu />
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl leading-tight max-w-sm">Início</h1>

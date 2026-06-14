@@ -13,6 +13,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BottomNav } from '../components/bottom-nav';
+import { AccountMenu } from '../components/account-menu';
 import { Button } from '../components/button';
 import { Input } from '../components/input';
 import { Inspection } from '../types';
@@ -75,8 +76,11 @@ export function InspectionsPage() {
   return (
     <div className="min-h-screen pb-20 bg-background">
       <div className="px-6 pt-12 pb-6 bg-primary text-primary-foreground">
-        <div className="pb-2 border-b-[3px] border-white/40 w-fit mb-4">
-          <img src={logo} alt="Logo" className="h-12 w-auto object-contain brightness-0 invert" />
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="pb-2 border-b-[3px] border-white/40 w-fit">
+            <img src={logo} alt="Logo" className="h-12 w-auto object-contain brightness-0 invert" />
+          </div>
+          <AccountMenu />
         </div>
         <div className="flex items-end justify-between gap-4">
           <div>

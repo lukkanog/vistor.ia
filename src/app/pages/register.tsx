@@ -3,6 +3,7 @@ import { useState } from 'react';
 import logo from '../../assets/logo.png';
 import { Button } from '../components/button';
 import { Input } from '../components/input';
+import { AccountStorage } from '../account-storage';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -11,6 +12,17 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
 
   const canSubmit = name.trim() && email.trim() && password.trim();
+
+  const handleCreateAccount = () => {
+    if (!canSubmit) return;
+
+    AccountStorage.update({
+      name: name.trim(),
+      email: email.trim(),
+    });
+
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-primary">
@@ -49,7 +61,7 @@ export function RegisterPage() {
               className="w-full"
               size="lg"
               disabled={!canSubmit}
-              onClick={() => navigate('/login')}
+              onClick={handleCreateAccount}
             >
               Criar conta
             </Button>
