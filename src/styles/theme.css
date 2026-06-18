@@ -2,13 +2,15 @@
 
 :root {
   --font-size: 16px;
+  --primary-corretor: #00A64B;
+  --primary-imobiliaria: #005928;
   --background: #f8f9fa;
   --foreground: #1a1a2e;
   --card: #ffffff;
   --card-foreground: #1a1a2e;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #00A64B;
+  --primary: var(--primary-corretor);
   --primary-foreground: #ffffff;
   --secondary: #e5e7eb;
   --secondary-foreground: #1a1a2e;
@@ -45,6 +47,10 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+:root[data-user-view='imobiliaria'] {
+  --primary: var(--primary-imobiliaria);
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -52,7 +58,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #00A64B;
+  --primary: var(--primary-corretor);
   --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -80,6 +86,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+}
+
+.dark[data-user-view='imobiliaria'] {
+  --primary: var(--primary-imobiliaria);
 }
 
 @theme inline {

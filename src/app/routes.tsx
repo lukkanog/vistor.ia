@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import { HomePage } from "./pages/home";
 import { LoginPage } from "./pages/login";
 import { AccountSettingsPage } from "./pages/account-settings";
+import { ViewSelectionPage } from "./pages/view-selection";
 import { InspectionsPage } from "./pages/inspections";
 import { NewInspectionPage } from "./pages/new-inspection";
 import { InspectionDetailPage } from "./pages/inspection-detail";
@@ -27,6 +28,10 @@ export const router = createBrowserRouter([
   {
     path: "/conta",
     Component: AccountSettingsPage,
+  },
+  {
+    path: "/selecionar-visualizacao",
+    Component: ViewSelectionPage,
   },
   {
     path: "/",

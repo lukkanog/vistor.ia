@@ -3,6 +3,7 @@ export type InspectionStatus = 'em_andamento' | 'concluida';
 export type ComparisonStatus = 'novo_dano' | 'sem_alteracao' | 'resolvido' | 'modificado';
 export type SignatureStatus = 'pendente' | 'assinado' | 'recusado';
 export type SubscriptionPlanId = 'basic' | 'pro' | 'premium';
+export type UserView = 'corretor' | 'imobiliaria';
 
 export interface Signature {
   id: string;
@@ -57,9 +58,23 @@ export interface UserProfile {
   email: string;
   company: string;
   role: string;
+  userView: UserView;
   photoDataUrl?: string;
   selectedPlanId: SubscriptionPlanId;
 }
+
+export const USER_VIEW_OPTIONS: { id: UserView; label: string; description: string }[] = [
+  {
+    id: 'corretor',
+    label: 'Corretor',
+    description: 'Executa vistorias, registra evidências e acompanha laudos.',
+  },
+  {
+    id: 'imobiliaria',
+    label: 'Imobiliária',
+    description: 'Gerencia corretores, operação, agenda e assinaturas.',
+  },
+];
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {

@@ -1,11 +1,11 @@
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BadgeCheck, Building2, Camera, Check, CreditCard, Mail, UserRound } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Building2, Camera, Check, CreditCard, Eye, Mail, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import { BottomNav } from '../components/bottom-nav';
 import { Button } from '../components/button';
 import { Input } from '../components/input';
 import { AccountStorage } from '../account-storage';
-import { SUBSCRIPTION_PLANS, SubscriptionPlanId, UserProfile } from '../types';
+import { SUBSCRIPTION_PLANS, SubscriptionPlanId, USER_VIEW_OPTIONS, UserProfile } from '../types';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -34,6 +34,11 @@ export function AccountSettingsPage() {
   const selectedPlan = useMemo(
     () => SUBSCRIPTION_PLANS.find((plan) => plan.id === profile.selectedPlanId) || SUBSCRIPTION_PLANS[0],
     [profile.selectedPlanId]
+  );
+
+  const selectedView = useMemo(
+    () => USER_VIEW_OPTIONS.find((option) => option.id === profile.userView) || USER_VIEW_OPTIONS[0],
+    [profile.userView]
   );
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -120,6 +125,10 @@ export function AccountSettingsPage() {
                 <BadgeCheck className="size-3.5" />
                 Plano atual: {selectedPlan.name}
               </div>
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                <Eye className="size-3.5" />
+                {selectedView.label}
+              </div>
             </div>
           </div>
 
@@ -129,7 +138,7 @@ export function AccountSettingsPage() {
               <Input
                 placeholder="Nome"
                 value={profile.name}
-                onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))}
+                readOnly
                 className="pl-11"
               />
             </div>
@@ -140,7 +149,7 @@ export function AccountSettingsPage() {
                 type="email"
                 placeholder="E-mail"
                 value={profile.email}
-                onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))}
+                readOnly
                 className="pl-11"
               />
             </div>
@@ -158,7 +167,7 @@ export function AccountSettingsPage() {
             <Input
               placeholder="Cargo"
               value={profile.role}
-              onChange={(event) => setProfile((current) => ({ ...current, role: event.target.value }))}
+              readOnly
             />
 
             <Button className="w-full" size="lg" onClick={handleSaveProfile}>

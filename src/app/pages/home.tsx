@@ -19,6 +19,7 @@ import logo from '../../assets/logo.png';
 import { Inspection } from '../types';
 import { InspectionStorage } from '../storage';
 import { Button } from '../components/button';
+import { AccountStorage } from '../account-storage';
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { seedMockData } from '../seed';

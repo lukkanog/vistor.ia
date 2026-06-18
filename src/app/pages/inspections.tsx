@@ -18,6 +18,7 @@ import { Button } from '../components/button';
 import { Input } from '../components/input';
 import { Inspection } from '../types';
 import { InspectionStorage } from '../storage';
+import { AccountStorage } from '../account-storage';
 import logo from '../../assets/logo.png';
 import { seedMockData } from '../seed';
 

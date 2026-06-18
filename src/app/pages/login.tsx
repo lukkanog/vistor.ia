@@ -16,8 +16,10 @@ export function LoginPage() {
 
     if (!email.trim() || !password.trim()) return;
 
-    AccountStorage.update({ email: email.trim() });
-    navigate('/');
+    AccountStorage.update({
+      email: email.trim(),
+    });
+    navigate('/selecionar-visualizacao');
   };
 
   return (
