@@ -40,6 +40,7 @@ export function AccountSettingsPage() {
     () => USER_VIEW_OPTIONS.find((option) => option.id === profile.userView) || USER_VIEW_OPTIONS[0],
     [profile.userView]
   );
+  const isManagerView = profile.userView === 'imobiliaria';
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -91,7 +92,7 @@ export function AccountSettingsPage() {
         <div>
           <h1 className="text-3xl leading-tight">Conta e ajustes</h1>
           <p className="mt-2 text-sm text-primary-foreground/80">
-            Gerencie perfil, foto e plano.
+            Gerencie perfil, foto e preferências da conta.
           </p>
         </div>
       </div>
@@ -121,10 +122,12 @@ export function AccountSettingsPage() {
             <div>
               <h2 className="text-lg">{profile.name || 'Seu perfil'}</h2>
               <p className="text-sm text-muted-foreground">{profile.role}</p>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs text-success">
-                <BadgeCheck className="size-3.5" />
-                Plano atual: {selectedPlan.name}
-              </div>
+              {!isManagerView && (
+                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs text-success">
+                  <BadgeCheck className="size-3.5" />
+                  Plano atual: {selectedPlan.name}
+                </div>
+              )}
               <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
                 <Eye className="size-3.5" />
                 {selectedView.label}
@@ -176,85 +179,87 @@ export function AccountSettingsPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <div className="mb-5 flex items-start gap-3">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <CreditCard className="size-5" />
+        {!isManagerView && (
+          <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <CreditCard className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg">Assinatura</h2>
+                <p className="text-sm text-muted-foreground">
+                  Escolha o plano ideal para o nível de operação e automação desejado.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg">Assinatura</h2>
-              <p className="text-sm text-muted-foreground">
-                Escolha o plano ideal para o nível de operação e automação desejado.
-              </p>
-            </div>
-          </div>
 
-          <div className="space-y-4">
-            {SUBSCRIPTION_PLANS.map((plan) => {
-              const isSelected = plan.id === profile.selectedPlanId;
+            <div className="space-y-4">
+              {SUBSCRIPTION_PLANS.map((plan) => {
+                const isSelected = plan.id === profile.selectedPlanId;
 
-              return (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => handlePlanSelect(plan.id)}
-                  className={`w-full rounded-3xl border p-5 text-left transition-all ${
-                    isSelected
-                      ? 'border-primary bg-primary/5 shadow-sm'
-                      : 'border-border bg-background hover:border-primary/30'
-                  }`}
-                >
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <div className="mb-2 flex items-center gap-2">
-                        <h3 className="text-xl">{plan.name}</h3>
-                        {isSelected && (
-                          <span className="rounded-full bg-primary px-2.5 py-1 text-xs text-primary-foreground">
-                            Atual
-                          </span>
-                        )}
+                return (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => handlePlanSelect(plan.id)}
+                    className={`w-full rounded-3xl border p-5 text-left transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border bg-background hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <div className="mb-2 flex items-center gap-2">
+                          <h3 className="text-xl">{plan.name}</h3>
+                          {isSelected && (
+                            <span className="rounded-full bg-primary px-2.5 py-1 text-xs text-primary-foreground">
+                              Atual
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{plan.description}</p>
-                    </div>
 
-                    <div
-                      className={`mt-1 flex size-7 shrink-0 items-center justify-center rounded-full border ${
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border text-transparent'
-                      }`}
-                    >
-                      <Check className="size-4" />
-                    </div>
-                  </div>
-
-                  <div className="mb-4 flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-3xl">{formatCurrency(plan.monthlyPrice)}</p>
-                      <p className="text-sm text-muted-foreground">por mês</p>
-                    </div>
-
-                    <div className="text-right text-sm text-muted-foreground">
-                      <p>{plan.features.length} recursos incluídos</p>
-                      <p>Plano {plan.name}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {plan.features.map((feature) => (
-                      <span
-                        key={feature}
-                        className="rounded-full bg-card px-3 py-1 text-xs text-muted-foreground border border-border"
+                      <div
+                        className={`mt-1 flex size-7 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border text-transparent'
+                        }`}
                       >
-                        {feature}
-                      </span>
-                    ))}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                        <Check className="size-4" />
+                      </div>
+                    </div>
+
+                    <div className="mb-4 flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-3xl">{formatCurrency(plan.monthlyPrice)}</p>
+                        <p className="text-sm text-muted-foreground">por mês</p>
+                      </div>
+
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{plan.features.length} recursos incluídos</p>
+                        <p>Plano {plan.name}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {plan.features.map((feature) => (
+                        <span
+                          key={feature}
+                          className="rounded-full bg-card px-3 py-1 text-xs text-muted-foreground border border-border"
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       <BottomNav />
