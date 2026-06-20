@@ -44,7 +44,7 @@ export function AccountMenu() {
   const handleViewSelect = (userView: UserView) => {
     AccountStorage.update({
       userView,
-      role: userView === 'corretor' ? 'Corretor / Vistoriador' : 'Gestor da imobiliária',
+      role: userView === 'corretor' ? 'Corretor / Vistoriador' : 'Gestora da imobiliária',
     });
     setIsViewDialogOpen(false);
   };

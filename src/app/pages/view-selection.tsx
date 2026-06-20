@@ -11,7 +11,7 @@ export function ViewSelectionPage() {
   const handleSelect = (userView: UserView) => {
     AccountStorage.update({
       userView,
-      role: userView === 'corretor' ? 'Corretor / Vistoriador' : 'Gestor da imobiliária',
+      role: userView === 'corretor' ? 'Corretor / Vistoriador' : 'Gestora da imobiliária',
     });
 
     navigate('/');

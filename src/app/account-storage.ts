@@ -11,7 +11,7 @@ const VIEW_PROFILES: Record<UserView, Pick<UserProfile, 'name' | 'email' | 'role
   imobiliaria: {
     name: 'Maria Oliveira',
     email: 'maria.oliveira@vistor.ia',
-    role: 'Gestor da imobiliária',
+    role: 'Gestora da imobiliária',
   },
 };
 

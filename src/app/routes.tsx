@@ -11,6 +11,7 @@ import { CalendarPage } from "./pages/calendar";
 import { SignaturePortalPage } from "./pages/signature-portal";
 import { ForgotPasswordPage } from "./pages/forgot-password";
 import { RegisterPage } from "./pages/register";
+import { BrokersPage } from "./pages/brokers";
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +57,10 @@ export const router = createBrowserRouter([
   {
     path: "/calendario",
     Component: CalendarPage,
+  },
+  {
+    path: "/corretores",
+    Component: BrokersPage,
   },
   {
     path: "/assinatura/:id/:signatureId",

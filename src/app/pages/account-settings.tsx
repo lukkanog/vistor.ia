@@ -91,7 +91,7 @@ export function AccountSettingsPage() {
         <div>
           <h1 className="text-3xl leading-tight">Conta e ajustes</h1>
           <p className="mt-2 text-sm text-primary-foreground/80">
-            Gerencie seu perfil, sua foto e seu plano atual.
+            Gerencie perfil, foto e plano.
           </p>
         </div>
       </div>
