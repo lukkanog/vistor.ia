@@ -16,6 +16,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    watch: {
+      // Avoid ENOSPC in constrained environments by using polling instead of fs watchers.
+      usePolling: true,
+      interval: 1000,
+    },
+  },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import {
   AlertTriangle,
+  Check,
   CalendarClock,
   CheckCircle2,
   ChevronRight,
   Clock3,
+  Mail,
+  Plus,
   Search,
   UserRound,
   Users,
@@ -16,15 +19,17 @@ import { AccountStorage } from '../account-storage';
 import { Input } from '../components/input';
 import { Button } from '../components/button';
 import { SUBSCRIPTION_PLANS, SubscriptionPlanId, UserProfile, UserView } from '../types';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
 type BrokerStatus = 'ativo' | 'inativo';
+type BrokerListStatus = BrokerStatus | 'pendente';
 type BrokerAvailability = 'disponivel' | 'em_campo' | 'sobrecarga' | 'folga';
 
 interface Broker {
   id: string;
   name: string;
   region: string;
-  status: BrokerStatus;
+  status: BrokerListStatus;
   availability: BrokerAvailability;
   workloadNow: number;
   inspectionsToday: number;
@@ -37,6 +42,8 @@ interface Broker {
   requestedPlanId?: SubscriptionPlanId;
   requestStatus?: 'pendente' | 'aprovado' | 'recusado';
   linkedAgencyId?: string;
+  inviteEmail?: string;
+  isInvited?: boolean;
 }
 
 const BROKERS: Broker[] = [
@@ -130,6 +137,11 @@ function getStatusLabel(status: BrokerStatus) {
   return status === 'ativo' ? 'Ativo' : 'Inativo';
 }
 
+function getListStatusLabel(status: BrokerListStatus) {
+  if (status === 'pendente') return 'Convite pendente';
+  return getStatusLabel(status);
+}
+
 function getAvailabilityLabel(availability: BrokerAvailability) {
   switch (availability) {
     case 'disponivel':
@@ -148,6 +160,9 @@ export function BrokersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | BrokerStatus>('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | BrokerAvailability>('all');
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteFeedback, setInviteFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     return AccountStorage.subscribe(() => setAccount(AccountStorage.get()));
@@ -163,7 +178,7 @@ export function BrokersPage() {
       ? SUBSCRIPTION_PLANS.find((plan) => plan.id === joaoAgency.pendingPlanChangeRequest?.requestedPlanId)
       : null;
 
-    return BROKERS.map((broker) => {
+    const baseBrokers = BROKERS.map((broker) => {
       if (broker.name !== 'João da Silva') return broker;
 
       return {
@@ -175,7 +190,75 @@ export function BrokersPage() {
         requestStatus: joaoAgency?.pendingPlanChangeRequest?.status,
       };
     });
+
+    const invitedBrokers = (account.invitedBrokers || []).map((broker) => ({
+      id: broker.id,
+      name: broker.name,
+      region: broker.region,
+      status: 'pendente' as const,
+      availability: 'folga' as const,
+      workloadNow: 0,
+      inspectionsToday: 0,
+      inspectionsWeek: 0,
+      pendingAssignments: 0,
+      averageCompletion: 'Aguardando aceite',
+      availabilityLabel: 'Convite enviado por e-mail',
+      subscriptionPlan: 'A definir',
+      inviteEmail: broker.email,
+      isInvited: true,
+    }));
+
+    return [...invitedBrokers, ...baseBrokers];
   }, [account]);
+
+  const handleInviteBroker = () => {
+    const normalizedEmail = inviteEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setInviteFeedback('Informe um e-mail para enviar o convite.');
+      return;
+    }
+
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+    if (!isValidEmail) {
+      setInviteFeedback('Informe um e-mail valido.');
+      return;
+    }
+
+    const alreadyInvited = (account.invitedBrokers || []).some((broker) => broker.email.toLowerCase() === normalizedEmail);
+    if (alreadyInvited) {
+      setInviteFeedback('Ja existe um convite pendente para este e-mail.');
+      return;
+    }
+
+    const localPart = normalizedEmail.split('@')[0] || 'corretor';
+    const generatedName = localPart
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') || 'Corretor convidado';
+
+    const updatedAccount = {
+      ...account,
+      invitedBrokers: [
+        {
+          id: `invited-${Date.now()}`,
+          email: normalizedEmail,
+          name: generatedName,
+          region: 'A definir',
+          status: 'pendente' as const,
+          invitedAt: new Date().toISOString(),
+        },
+        ...(account.invitedBrokers || []),
+      ],
+    };
+
+    setAccount(updatedAccount);
+    AccountStorage.save(updatedAccount);
+    setInviteEmail('');
+    setInviteFeedback(null);
+    setIsInviteDialogOpen(false);
+  };
 
   const handleReviewRequest = (agencyId: string | undefined, decision: 'aprovado' | 'recusado') => {
     if (!agencyId) return;
@@ -210,7 +293,8 @@ export function BrokersPage() {
       const matchesSearch = normalizedSearch.length === 0
         ? true
         : broker.name.toLowerCase().includes(normalizedSearch)
-          || broker.region.toLowerCase().includes(normalizedSearch);
+          || broker.region.toLowerCase().includes(normalizedSearch)
+          || broker.inviteEmail?.toLowerCase().includes(normalizedSearch);
       const matchesStatus = statusFilter === 'all' ? true : broker.status === statusFilter;
       const matchesAvailability = availabilityFilter === 'all' ? true : broker.availability === availabilityFilter;
 
@@ -223,6 +307,7 @@ export function BrokersPage() {
     availableNow: brokers.filter((broker) => broker.availability === 'disponivel').length,
     overloadedNow: brokers.filter((broker) => broker.availability === 'sobrecarga').length,
     pendingAssignments: brokers.reduce((sum, broker) => sum + broker.pendingAssignments, 0),
+    pendingInvites: brokers.filter((broker) => broker.status === 'pendente').length,
     averageToday: '1h27',
   }), [brokers]);
 
@@ -276,6 +361,10 @@ export function BrokersPage() {
                 Tempo médio de conclusão hoje: {summary.averageToday}
               </p>
             </div>
+            <Button size="sm" onClick={() => setIsInviteDialogOpen(true)}>
+              <Plus className="size-4" />
+              Convidar
+            </Button>
           </div>
 
           <Input
@@ -319,10 +408,10 @@ export function BrokersPage() {
       </div>
 
       <div className="px-6 py-2">
-        <div className="mb-3 flex items-center justify-between gap-4">
+          <div className="mb-3 flex items-center justify-between gap-4">
           <h2 className="text-lg font-medium">Lista da equipe</h2>
           <span className="text-sm text-muted-foreground">
-            {filteredBrokers.length} corretor(es)
+            {filteredBrokers.length} corretor(es) • {summary.pendingInvites} convite(s)
           </span>
         </div>
 
@@ -346,9 +435,11 @@ export function BrokersPage() {
                       <span className={`inline-block rounded-full px-2 py-0.5 text-xs ${
                         broker.status === 'ativo'
                           ? 'bg-success/10 text-success'
+                          : broker.status === 'pendente'
+                            ? 'bg-warning/10 text-warning'
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        {getStatusLabel(broker.status)}
+                        {getListStatusLabel(broker.status)}
                       </span>
                       <span className={`inline-block rounded-full px-2 py-0.5 text-xs ${
                         broker.availability === 'sobrecarga'
@@ -366,6 +457,11 @@ export function BrokersPage() {
                     <p className="text-sm text-muted-foreground">
                       {broker.region} • {broker.availabilityLabel}
                     </p>
+                    {broker.inviteEmail && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {broker.inviteEmail}
+                      </p>
+                    )}
                   </div>
                   <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
                 </div>
@@ -424,12 +520,22 @@ export function BrokersPage() {
                 <div className="mb-3 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                     <Users className="size-3" />
-                    {broker.status === 'ativo' ? 'Em escala hoje' : 'Fora da escala'}
+                    {broker.status === 'ativo'
+                      ? 'Em escala hoje'
+                      : broker.status === 'pendente'
+                        ? 'Aguardando aceite do convite'
+                        : 'Fora da escala'}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary">
                     <CheckCircle2 className="size-3" />
                     Plano {broker.subscriptionPlan}
                   </span>
+                  {broker.isInvited && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs text-warning">
+                      <Mail className="size-3" />
+                      Convite pendente
+                    </span>
+                  )}
                   {broker.requestStatus === 'pendente' && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs text-warning">
                       <AlertTriangle className="size-3" />
@@ -509,6 +615,49 @@ export function BrokersPage() {
       </div>
 
       <BottomNav />
+
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent className="overflow-hidden rounded-[2rem] border-border p-0">
+          <div className="space-y-5 p-6">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-2xl leading-tight">Convidar corretor</DialogTitle>
+              <DialogDescription className="text-sm leading-6">
+                Informe o e-mail do corretor para enviar um convite e acompanhar o aceite pela equipe.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <div className="relative">
+                <Mail className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="nome@imobiliaria.com.br"
+                  value={inviteEmail}
+                  onChange={(event) => {
+                    setInviteEmail(event.target.value);
+                    if (inviteFeedback) setInviteFeedback(null);
+                  }}
+                  className="pl-11"
+                />
+              </div>
+
+              {inviteFeedback && (
+                <p className="text-sm text-destructive">{inviteFeedback}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setIsInviteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button className="w-full sm:w-auto" onClick={handleInviteBroker}>
+                <Check className="size-4" />
+                Enviar convite
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

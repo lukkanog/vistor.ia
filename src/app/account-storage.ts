@@ -1,4 +1,4 @@
-import { AgencyMembership, SUBSCRIPTION_PLANS, UserProfile, USER_VIEW_OPTIONS, UserView } from './types';
+import { AgencyMembership, BrokerInvite, SUBSCRIPTION_PLANS, UserProfile, USER_VIEW_OPTIONS, UserView } from './types';
 
 const ACCOUNT_STORAGE_KEY = 'vistor_account';
 const ACCOUNT_UPDATED_EVENT = 'vistor-account-updated';
@@ -27,7 +27,21 @@ const DEFAULT_ACCOUNT: UserProfile = {
   role: VIEW_PROFILES.corretor.role,
   userView: 'corretor',
   agencies: DEFAULT_CORRETOR_AGENCIES,
+  invitedBrokers: [],
 };
+
+function normalizeInvitedBrokers(profile: Partial<UserProfile>): BrokerInvite[] {
+  if (!Array.isArray(profile.invitedBrokers)) return [];
+
+  return profile.invitedBrokers.map((broker, index) => ({
+    id: broker.id || `invited-broker-${index + 1}`,
+    email: broker.email || '',
+    name: broker.name || 'Corretor convidado',
+    region: broker.region || 'A definir',
+    status: 'pendente',
+    invitedAt: broker.invitedAt || new Date().toISOString(),
+  }));
+}
 
 function normalizeAgencies(profile: Partial<UserProfile> & { selectedPlanId?: string }): AgencyMembership[] {
   if (Array.isArray(profile.agencies) && profile.agencies.length > 0) {
@@ -67,6 +81,7 @@ function applyViewProfile(profile: UserProfile): UserProfile {
     ...profile,
     ...VIEW_PROFILES[profile.userView],
     agencies: normalizeAgencies(profile),
+    invitedBrokers: normalizeInvitedBrokers(profile),
   };
 }
 
@@ -77,6 +92,7 @@ export const AccountStorage = {
       return applyViewProfile({
         ...DEFAULT_ACCOUNT,
         agencies: [...DEFAULT_ACCOUNT.agencies],
+        invitedBrokers: [],
       });
     }
 
@@ -85,6 +101,7 @@ export const AccountStorage = {
       ...DEFAULT_ACCOUNT,
       ...parsed,
       agencies: normalizeAgencies(parsed),
+      invitedBrokers: normalizeInvitedBrokers(parsed),
     });
   },
 

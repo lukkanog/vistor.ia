@@ -5,6 +5,7 @@ export type SignatureStatus = 'pendente' | 'assinado' | 'recusado';
 export type SubscriptionPlanId = 'basic' | 'pro' | 'premium';
 export type UserView = 'corretor' | 'imobiliaria';
 export type SubscriptionChangeRequestStatus = 'pendente' | 'aprovado' | 'recusado';
+export type BrokerInviteStatus = 'pendente';
 
 export interface Signature {
   id: string;
@@ -66,6 +67,15 @@ export interface AgencyMembership {
   };
 }
 
+export interface BrokerInvite {
+  id: string;
+  email: string;
+  name: string;
+  region: string;
+  status: BrokerInviteStatus;
+  invitedAt: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -74,6 +84,7 @@ export interface UserProfile {
   userView: UserView;
   photoDataUrl?: string;
   agencies: AgencyMembership[];
+  invitedBrokers?: BrokerInvite[];
 }
 
 export const USER_VIEW_OPTIONS: { id: UserView; label: string; description: string }[] = [
