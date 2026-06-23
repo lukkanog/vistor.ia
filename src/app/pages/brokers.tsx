@@ -15,7 +15,7 @@ import { AccountMenu } from '../components/account-menu';
 import { AccountStorage } from '../account-storage';
 import { Input } from '../components/input';
 import { Button } from '../components/button';
-import { UserView } from '../types';
+import { SUBSCRIPTION_PLANS, SubscriptionPlanId, UserProfile, UserView } from '../types';
 
 type BrokerStatus = 'ativo' | 'inativo';
 type BrokerAvailability = 'disponivel' | 'em_campo' | 'sobrecarga' | 'folga';
@@ -32,6 +32,11 @@ interface Broker {
   pendingAssignments: number;
   averageCompletion: string;
   availabilityLabel: string;
+  subscriptionPlan: string;
+  requestedPlan?: string;
+  requestedPlanId?: SubscriptionPlanId;
+  requestStatus?: 'pendente' | 'aprovado' | 'recusado';
+  linkedAgencyId?: string;
 }
 
 const BROKERS: Broker[] = [
@@ -47,6 +52,7 @@ const BROKERS: Broker[] = [
     pendingAssignments: 1,
     averageCompletion: '1h28',
     availabilityLabel: 'Em campo até 14h30',
+    subscriptionPlan: 'Basic',
   },
   {
     id: 'broker-2',
@@ -60,6 +66,7 @@ const BROKERS: Broker[] = [
     pendingAssignments: 0,
     averageCompletion: '1h19',
     availabilityLabel: 'Livre para nova vistoria às 11h',
+    subscriptionPlan: 'Pro',
   },
   {
     id: 'broker-3',
@@ -73,6 +80,7 @@ const BROKERS: Broker[] = [
     pendingAssignments: 2,
     averageCompletion: '1h41',
     availabilityLabel: 'Carga alta no turno da tarde',
+    subscriptionPlan: 'Premium',
   },
   {
     id: 'broker-4',
@@ -86,6 +94,7 @@ const BROKERS: Broker[] = [
     pendingAssignments: 1,
     averageCompletion: '1h35',
     availabilityLabel: 'Sem janela livre antes de 16h',
+    subscriptionPlan: 'Pro',
   },
   {
     id: 'broker-5',
@@ -99,6 +108,7 @@ const BROKERS: Broker[] = [
     pendingAssignments: 0,
     averageCompletion: '1h12',
     availabilityLabel: 'Disponível para remanejamento',
+    subscriptionPlan: 'Basic',
   },
   {
     id: 'broker-6',
@@ -112,6 +122,7 @@ const BROKERS: Broker[] = [
     pendingAssignments: 0,
     averageCompletion: '1h24',
     availabilityLabel: 'Folga programada hoje',
+    subscriptionPlan: 'Basic',
   },
 ];
 
@@ -133,19 +144,69 @@ function getAvailabilityLabel(availability: BrokerAvailability) {
 }
 
 export function BrokersPage() {
-  const [userView, setUserView] = useState<UserView>(AccountStorage.getSelectedView());
+  const [account, setAccount] = useState<UserProfile>(AccountStorage.get());
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | BrokerStatus>('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | BrokerAvailability>('all');
 
   useEffect(() => {
-    return AccountStorage.subscribe(() => setUserView(AccountStorage.getSelectedView()));
+    return AccountStorage.subscribe(() => setAccount(AccountStorage.get()));
   }, []);
+
+  const userView: UserView = account.userView;
+
+  const brokers = useMemo(() => {
+    const managerAgencyName = account.company || 'Vistor.ia Operações';
+    const joaoAgency = account.agencies.find((agency) => agency.name === managerAgencyName) || account.agencies[0];
+    const joaoPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === joaoAgency?.selectedPlanId);
+    const joaoRequestedPlan = joaoAgency?.pendingPlanChangeRequest
+      ? SUBSCRIPTION_PLANS.find((plan) => plan.id === joaoAgency.pendingPlanChangeRequest?.requestedPlanId)
+      : null;
+
+    return BROKERS.map((broker) => {
+      if (broker.name !== 'João da Silva') return broker;
+
+      return {
+        ...broker,
+        linkedAgencyId: joaoAgency?.id,
+        subscriptionPlan: joaoPlan?.name || broker.subscriptionPlan,
+        requestedPlan: joaoRequestedPlan?.name,
+        requestedPlanId: joaoAgency?.pendingPlanChangeRequest?.requestedPlanId,
+        requestStatus: joaoAgency?.pendingPlanChangeRequest?.status,
+      };
+    });
+  }, [account]);
+
+  const handleReviewRequest = (agencyId: string | undefined, decision: 'aprovado' | 'recusado') => {
+    if (!agencyId) return;
+
+    const updatedAccount = {
+      ...account,
+      agencies: account.agencies.map((agency) => {
+        if (agency.id !== agencyId || !agency.pendingPlanChangeRequest) return agency;
+
+        return {
+          ...agency,
+          selectedPlanId: decision === 'aprovado'
+            ? agency.pendingPlanChangeRequest.requestedPlanId
+            : agency.selectedPlanId,
+          pendingPlanChangeRequest: {
+            ...agency.pendingPlanChangeRequest,
+            status: decision,
+            reviewedAt: new Date().toISOString(),
+          },
+        };
+      }),
+    };
+
+    setAccount(updatedAccount);
+    AccountStorage.save(updatedAccount);
+  };
 
   const filteredBrokers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return BROKERS.filter((broker) => {
+    return brokers.filter((broker) => {
       const matchesSearch = normalizedSearch.length === 0
         ? true
         : broker.name.toLowerCase().includes(normalizedSearch)
@@ -155,15 +216,15 @@ export function BrokersPage() {
 
       return matchesSearch && matchesStatus && matchesAvailability;
     });
-  }, [availabilityFilter, search, statusFilter]);
+  }, [availabilityFilter, brokers, search, statusFilter]);
 
   const summary = useMemo(() => ({
-    activeNow: BROKERS.filter((broker) => broker.status === 'ativo').length,
-    availableNow: BROKERS.filter((broker) => broker.availability === 'disponivel').length,
-    overloadedNow: BROKERS.filter((broker) => broker.availability === 'sobrecarga').length,
-    pendingAssignments: BROKERS.reduce((sum, broker) => sum + broker.pendingAssignments, 0),
+    activeNow: brokers.filter((broker) => broker.status === 'ativo').length,
+    availableNow: brokers.filter((broker) => broker.availability === 'disponivel').length,
+    overloadedNow: brokers.filter((broker) => broker.availability === 'sobrecarga').length,
+    pendingAssignments: brokers.reduce((sum, broker) => sum + broker.pendingAssignments, 0),
     averageToday: '1h27',
-  }), []);
+  }), [brokers]);
 
   if (userView !== 'imobiliaria') {
     return <Navigate to="/" replace />;
@@ -326,6 +387,38 @@ export function BrokersPage() {
                     <p className="mb-1">Tempo médio</p>
                     <p className="text-foreground">{broker.averageCompletion}</p>
                   </div>
+                  <div className="rounded-2xl bg-muted p-3 text-muted-foreground">
+                    <p className="mb-1">Plano</p>
+                    <p className="text-foreground">{broker.subscriptionPlan}</p>
+                  </div>
+                  <div className={`rounded-2xl p-3 text-muted-foreground ${
+                    broker.requestStatus === 'pendente'
+                      ? 'bg-warning/10 text-warning'
+                      : broker.requestStatus === 'aprovado'
+                        ? 'bg-success/10 text-success'
+                        : broker.requestStatus === 'recusado'
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-muted'
+                  }`}>
+                    <p className="mb-1">Solicitação</p>
+                    <p className={
+                      broker.requestStatus === 'pendente'
+                        ? 'text-warning'
+                        : broker.requestStatus === 'aprovado'
+                          ? 'text-success'
+                          : broker.requestStatus === 'recusado'
+                            ? 'text-destructive'
+                            : 'text-foreground'
+                    }>
+                      {broker.requestStatus === 'pendente' && broker.requestedPlan
+                        ? `Mudança para ${broker.requestedPlan}`
+                        : broker.requestStatus === 'aprovado' && broker.requestedPlan
+                          ? `Aprovada para ${broker.requestedPlan}`
+                          : broker.requestStatus === 'recusado' && broker.requestedPlan
+                            ? `Recusada para ${broker.requestedPlan}`
+                            : 'Sem pendências'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -333,6 +426,28 @@ export function BrokersPage() {
                     <Users className="size-3" />
                     {broker.status === 'ativo' ? 'Em escala hoje' : 'Fora da escala'}
                   </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                    <CheckCircle2 className="size-3" />
+                    Plano {broker.subscriptionPlan}
+                  </span>
+                  {broker.requestStatus === 'pendente' && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs text-warning">
+                      <AlertTriangle className="size-3" />
+                      Solicitação em análise
+                    </span>
+                  )}
+                  {broker.requestStatus === 'aprovado' && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs text-success">
+                      <CheckCircle2 className="size-3" />
+                      Solicitação aprovada
+                    </span>
+                  )}
+                  {broker.requestStatus === 'recusado' && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-xs text-destructive">
+                      <AlertTriangle className="size-3" />
+                      Solicitação recusada
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                     <CalendarClock className="size-3" />
                     {broker.availabilityLabel}
@@ -344,6 +459,16 @@ export function BrokersPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+                  {broker.requestStatus === 'pendente' && broker.linkedAgencyId && (
+                    <>
+                      <Button size="sm" variant="success" onClick={() => handleReviewRequest(broker.linkedAgencyId, 'aprovado')}>
+                        Aprovar plano
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleReviewRequest(broker.linkedAgencyId, 'recusado')}>
+                        Recusar plano
+                      </Button>
+                    </>
+                  )}
                   <Button size="sm" variant="secondary">
                     <UserRound className="size-3" />
                     Atribuir vistoria

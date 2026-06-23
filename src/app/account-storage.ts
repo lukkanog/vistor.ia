@@ -1,4 +1,4 @@
-import { SUBSCRIPTION_PLANS, UserProfile, USER_VIEW_OPTIONS, UserView } from './types';
+import { AgencyMembership, SUBSCRIPTION_PLANS, UserProfile, USER_VIEW_OPTIONS, UserView } from './types';
 
 const ACCOUNT_STORAGE_KEY = 'vistor_account';
 const ACCOUNT_UPDATED_EVENT = 'vistor-account-updated';
@@ -15,31 +15,76 @@ const VIEW_PROFILES: Record<UserView, Pick<UserProfile, 'name' | 'email' | 'role
   },
 };
 
+const DEFAULT_CORRETOR_AGENCIES: AgencyMembership[] = [
+  { id: 'agency-vistoria', name: 'Vistor.ia Operações', selectedPlanId: 'basic' },
+  { id: 'agency-jardins', name: 'Jardins Imobiliária', selectedPlanId: 'premium' },
+];
+
 const DEFAULT_ACCOUNT: UserProfile = {
   name: VIEW_PROFILES.corretor.name,
   email: VIEW_PROFILES.corretor.email,
   company: 'Vistor.ia Operações',
   role: VIEW_PROFILES.corretor.role,
   userView: 'corretor',
-  selectedPlanId: 'basic',
+  agencies: DEFAULT_CORRETOR_AGENCIES,
 };
+
+function normalizeAgencies(profile: Partial<UserProfile> & { selectedPlanId?: string }): AgencyMembership[] {
+  if (Array.isArray(profile.agencies) && profile.agencies.length > 0) {
+    return profile.agencies.map((agency, index) => ({
+      id: agency.id || `agency-${index + 1}`,
+      name: agency.name || `Imobiliária ${index + 1}`,
+      selectedPlanId: agency.selectedPlanId || 'basic',
+      pendingPlanChangeRequest: agency.pendingPlanChangeRequest
+        ? {
+            requestedPlanId: agency.pendingPlanChangeRequest.requestedPlanId || agency.selectedPlanId || 'basic',
+            status: agency.pendingPlanChangeRequest.status || 'pendente',
+            requestedAt: agency.pendingPlanChangeRequest.requestedAt,
+            reviewedAt: agency.pendingPlanChangeRequest.reviewedAt,
+          }
+        : undefined,
+    }));
+  }
+
+  if (profile.userView === 'corretor') {
+    const legacyAgencyName = profile.company || DEFAULT_CORRETOR_AGENCIES[0].name;
+    const legacyPlanId = (profile.selectedPlanId as AgencyMembership['selectedPlanId']) || DEFAULT_CORRETOR_AGENCIES[0].selectedPlanId;
+
+    return [
+      {
+        id: 'agency-legacy',
+        name: legacyAgencyName,
+        selectedPlanId: legacyPlanId,
+      },
+    ];
+  }
+
+  return [];
+}
 
 function applyViewProfile(profile: UserProfile): UserProfile {
   return {
     ...profile,
     ...VIEW_PROFILES[profile.userView],
+    agencies: normalizeAgencies(profile),
   };
 }
 
 export const AccountStorage = {
   get: (): UserProfile => {
     const data = localStorage.getItem(ACCOUNT_STORAGE_KEY);
-    if (!data) return DEFAULT_ACCOUNT;
+    if (!data) {
+      return applyViewProfile({
+        ...DEFAULT_ACCOUNT,
+        agencies: [...DEFAULT_ACCOUNT.agencies],
+      });
+    }
 
     const parsed = JSON.parse(data);
     return applyViewProfile({
       ...DEFAULT_ACCOUNT,
       ...parsed,
+      agencies: normalizeAgencies(parsed),
     });
   },
 
@@ -60,7 +105,8 @@ export const AccountStorage = {
 
   getSelectedPlan: () => {
     const account = AccountStorage.get();
-    return SUBSCRIPTION_PLANS.find((plan) => plan.id === account.selectedPlanId) || SUBSCRIPTION_PLANS[0];
+    const primaryAgency = account.agencies[0];
+    return SUBSCRIPTION_PLANS.find((plan) => plan.id === primaryAgency?.selectedPlanId) || SUBSCRIPTION_PLANS[0];
   },
 
   getSelectedView: (): UserView => {

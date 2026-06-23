@@ -4,6 +4,7 @@ export type ComparisonStatus = 'novo_dano' | 'sem_alteracao' | 'resolvido' | 'mo
 export type SignatureStatus = 'pendente' | 'assinado' | 'recusado';
 export type SubscriptionPlanId = 'basic' | 'pro' | 'premium';
 export type UserView = 'corretor' | 'imobiliaria';
+export type SubscriptionChangeRequestStatus = 'pendente' | 'aprovado' | 'recusado';
 
 export interface Signature {
   id: string;
@@ -53,6 +54,18 @@ export interface SubscriptionPlan {
   features: string[];
 }
 
+export interface AgencyMembership {
+  id: string;
+  name: string;
+  selectedPlanId: SubscriptionPlanId;
+  pendingPlanChangeRequest?: {
+    requestedPlanId: SubscriptionPlanId;
+    status: SubscriptionChangeRequestStatus;
+    requestedAt?: string;
+    reviewedAt?: string;
+  };
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -60,7 +73,7 @@ export interface UserProfile {
   role: string;
   userView: UserView;
   photoDataUrl?: string;
-  selectedPlanId: SubscriptionPlanId;
+  agencies: AgencyMembership[];
 }
 
 export const USER_VIEW_OPTIONS: { id: UserView; label: string; description: string }[] = [

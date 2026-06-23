@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import { SUBSCRIPTION_PLANS, USER_VIEW_OPTIONS, UserProfile, UserView } from '../types';
+import { USER_VIEW_OPTIONS, UserProfile, UserView } from '../types';
 
 function getInitials(name: string) {
   return name
@@ -31,10 +31,11 @@ function getInitials(name: string) {
 export function AccountMenu() {
   const [profile, setProfile] = useState<UserProfile>(AccountStorage.get());
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const selectedPlan = useMemo(
-    () => SUBSCRIPTION_PLANS.find((plan) => plan.id === profile.selectedPlanId) || SUBSCRIPTION_PLANS[0],
-    [profile.selectedPlanId]
-  );
+  const agencySummary = useMemo(() => {
+    if (profile.userView !== 'corretor') return '';
+    const count = profile.agencies.length;
+    return `${count} ${count === 1 ? 'imobiliária vinculada' : 'imobiliárias vinculadas'}`;
+  }, [profile.agencies, profile.userView]);
 
   useEffect(() => {
     const sync = () => setProfile(AccountStorage.get());
@@ -74,7 +75,7 @@ export function AccountMenu() {
               {AccountStorage.getViewLabel(profile.userView)}
             </p>
             {profile.userView === 'corretor' && (
-              <p className="mt-1 text-xs text-primary">Plano {selectedPlan.name}</p>
+              <p className="mt-1 text-xs text-primary">{agencySummary}</p>
             )}
           </DropdownMenuLabel>
 

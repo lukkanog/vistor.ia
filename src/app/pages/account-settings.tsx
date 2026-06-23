@@ -6,6 +6,17 @@ import { Button } from '../components/button';
 import { Input } from '../components/input';
 import { AccountStorage } from '../account-storage';
 import { SUBSCRIPTION_PLANS, SubscriptionPlanId, USER_VIEW_OPTIONS, UserProfile } from '../types';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -26,14 +37,30 @@ function getInitials(name: string) {
 export function AccountSettingsPage() {
   const [profile, setProfile] = useState<UserProfile>(AccountStorage.get());
   const [saved, setSaved] = useState(false);
+  const [pendingPlanRequest, setPendingPlanRequest] = useState<{
+    agencyId: string;
+    agencyName: string;
+    planId: SubscriptionPlanId;
+    planName: string;
+  } | null>(null);
+  const [planRequestDialog, setPlanRequestDialog] = useState<{
+    agencyName: string;
+    planName: string;
+  } | null>(null);
 
   useEffect(() => {
     setProfile(AccountStorage.get());
   }, []);
 
-  const selectedPlan = useMemo(
-    () => SUBSCRIPTION_PLANS.find((plan) => plan.id === profile.selectedPlanId) || SUBSCRIPTION_PLANS[0],
-    [profile.selectedPlanId]
+  const agencyCountLabel = useMemo(() => (
+    `${profile.agencies.length} ${profile.agencies.length === 1 ? 'imobiliária vinculada' : 'imobiliárias vinculadas'}`
+  ), [profile.agencies.length]);
+
+  const agencyPlansLabel = useMemo(
+    () => profile.agencies
+      .map((agency) => SUBSCRIPTION_PLANS.find((plan) => plan.id === agency.selectedPlanId)?.name || 'Basic')
+      .join(' • '),
+    [profile.agencies]
   );
 
   const selectedView = useMemo(
@@ -62,12 +89,49 @@ export function AccountSettingsPage() {
     window.setTimeout(() => setSaved(false), 1800);
   };
 
-  const handlePlanSelect = (planId: SubscriptionPlanId) => {
-    const updated = { ...profile, selectedPlanId: planId };
-    setProfile(updated);
-    AccountStorage.save(updated);
+  const handleAgencyPlanSelect = (agencyId: string, planId: SubscriptionPlanId) => {
+    const currentAgency = profile.agencies.find((agency) => agency.id === agencyId);
+    if (!currentAgency || currentAgency.selectedPlanId === planId) return;
+
+    const selectedPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === planId) || SUBSCRIPTION_PLANS[0];
+
+    setPendingPlanRequest({
+      agencyId,
+      agencyName: currentAgency.name,
+      planId,
+      planName: selectedPlan.name,
+    });
+  };
+
+  const handleConfirmPlanRequest = () => {
+    if (!pendingPlanRequest) return;
+
+    const updatedProfile = {
+      ...profile,
+      agencies: profile.agencies.map((agency) => (
+        agency.id === pendingPlanRequest.agencyId
+          ? {
+              ...agency,
+              pendingPlanChangeRequest: {
+                requestedPlanId: pendingPlanRequest.planId,
+                status: 'pendente',
+                requestedAt: new Date().toISOString(),
+                reviewedAt: undefined,
+              },
+            }
+          : agency
+      )),
+    };
+
+    setProfile(updatedProfile);
+    AccountStorage.save(updatedProfile);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
+    setPlanRequestDialog({
+      agencyName: pendingPlanRequest.agencyName,
+      planName: pendingPlanRequest.planName,
+    });
+    setPendingPlanRequest(null);
   };
 
   return (
@@ -125,7 +189,13 @@ export function AccountSettingsPage() {
               {!isManagerView && (
                 <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs text-success">
                   <BadgeCheck className="size-3.5" />
-                  Plano atual: {selectedPlan.name}
+                  {agencyCountLabel}
+                </div>
+              )}
+              {!isManagerView && (
+                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                  <CreditCard className="size-3.5" />
+                  {agencyPlansLabel}
                 </div>
               )}
               <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
@@ -157,15 +227,17 @@ export function AccountSettingsPage() {
               />
             </div>
 
-            <div className="relative">
-              <Building2 className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Empresa"
-                value={profile.company}
-                onChange={(event) => setProfile((current) => ({ ...current, company: event.target.value }))}
-                className="pl-11"
-              />
-            </div>
+            {isManagerView && (
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Empresa"
+                  value={profile.company}
+                  onChange={(event) => setProfile((current) => ({ ...current, company: event.target.value }))}
+                  className="pl-11"
+                />
+              </div>
+            )}
 
             <Input
               placeholder="Cargo"
@@ -183,78 +255,155 @@ export function AccountSettingsPage() {
           <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <CreditCard className="size-5" />
+                <Building2 className="size-5" />
               </div>
               <div>
-                <h2 className="text-lg">Assinatura</h2>
+                <h2 className="text-lg">Imobiliárias vinculadas</h2>
                 <p className="text-sm text-muted-foreground">
-                  Escolha o plano ideal para o nível de operação e automação desejado.
+                  Cada vínculo possui um plano independente para a operação em cada imobiliária.
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
-              {SUBSCRIPTION_PLANS.map((plan) => {
-                const isSelected = plan.id === profile.selectedPlanId;
+              {profile.agencies.map((agency) => {
+                const selectedAgencyPlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === agency.selectedPlanId) || SUBSCRIPTION_PLANS[0];
+                const requestedAgencyPlan = agency.pendingPlanChangeRequest
+                  ? SUBSCRIPTION_PLANS.find((plan) => plan.id === agency.pendingPlanChangeRequest?.requestedPlanId) || SUBSCRIPTION_PLANS[0]
+                  : null;
+                const requestStatus = agency.pendingPlanChangeRequest?.status;
+                const hasPendingRequest = requestStatus === 'pendente';
+                const hasApprovedRequest = requestStatus === 'aprovado';
+                const hasRejectedRequest = requestStatus === 'recusado';
 
                 return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => handlePlanSelect(plan.id)}
-                    className={`w-full rounded-3xl border p-5 text-left transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-border bg-background hover:border-primary/30'
-                    }`}
-                  >
+                  <div key={agency.id} className="rounded-3xl border border-border bg-background p-5">
                     <div className="mb-4 flex items-start justify-between gap-4">
-                      <div>
-                        <div className="mb-2 flex items-center gap-2">
-                          <h3 className="text-xl">{plan.name}</h3>
-                          {isSelected && (
-                            <span className="rounded-full bg-primary px-2.5 py-1 text-xs text-primary-foreground">
-                              Atual
-                            </span>
-                          )}
+                      <div className="min-w-0 flex-1">
+                        <div className="relative">
+                          <Building2 className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Nome da imobiliária"
+                            value={agency.name}
+                            readOnly
+                            className="pl-11"
+                          />
                         </div>
-                        <p className="text-sm text-muted-foreground">{plan.description}</p>
-                      </div>
-
-                      <div
-                        className={`mt-1 flex size-7 shrink-0 items-center justify-center rounded-full border ${
-                          isSelected
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border text-transparent'
-                        }`}
-                      >
-                        <Check className="size-4" />
-                      </div>
-                    </div>
-
-                    <div className="mb-4 flex items-end justify-between gap-4">
-                      <div>
-                        <p className="text-3xl">{formatCurrency(plan.monthlyPrice)}</p>
-                        <p className="text-sm text-muted-foreground">por mês</p>
-                      </div>
-
-                      <div className="text-right text-sm text-muted-foreground">
-                        <p>{plan.features.length} recursos incluídos</p>
-                        <p>Plano {plan.name}</p>
+                        <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                          <CreditCard className="size-3.5" />
+                          Plano {selectedAgencyPlan.name}
+                        </div>
+                        {hasPendingRequest && requestedAgencyPlan && (
+                          <div className="mt-2 rounded-2xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
+                            Solicitação em análise: mudança para o plano {requestedAgencyPlan.name}.
+                            Aguarde o retorno da imobiliária para pedir uma nova alteração.
+                          </div>
+                        )}
+                        {hasApprovedRequest && requestedAgencyPlan && (
+                          <div className="mt-2 rounded-2xl border border-success/20 bg-success/10 px-3 py-2 text-xs text-success">
+                            Solicitação aprovada pela imobiliária. O plano {requestedAgencyPlan.name} já está ativo.
+                          </div>
+                        )}
+                        {hasRejectedRequest && requestedAgencyPlan && (
+                          <div className="mt-2 rounded-2xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            Solicitação recusada pela imobiliária para o plano {requestedAgencyPlan.name}.
+                            Você pode enviar um novo pedido quando quiser.
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {plan.features.map((feature) => (
-                        <span
-                          key={feature}
-                          className="rounded-full bg-card px-3 py-1 text-xs text-muted-foreground border border-border"
-                        >
-                          {feature}
-                        </span>
-                      ))}
+                    <div className="grid gap-3">
+                      {SUBSCRIPTION_PLANS.map((plan) => {
+                        const isSelected = plan.id === agency.selectedPlanId;
+                        const isRequested = hasPendingRequest && agency.pendingPlanChangeRequest?.requestedPlanId === plan.id;
+                        const isApprovedRequest = hasApprovedRequest && agency.pendingPlanChangeRequest?.requestedPlanId === plan.id;
+                        const isRejectedRequest = hasRejectedRequest && agency.pendingPlanChangeRequest?.requestedPlanId === plan.id;
+
+                        return (
+                          <button
+                            key={plan.id}
+                            type="button"
+                            onClick={() => handleAgencyPlanSelect(agency.id, plan.id)}
+                            disabled={hasPendingRequest}
+                            className={`w-full rounded-3xl border p-5 text-left transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : isRequested
+                                  ? 'border-warning bg-warning/5 shadow-sm'
+                                  : 'border-border bg-card hover:border-primary/30'
+                            } ${
+                              hasPendingRequest ? 'cursor-not-allowed opacity-70' : ''
+                            }`}
+                          >
+                            <div className="mb-4 flex items-start justify-between gap-4">
+                              <div>
+                                <div className="mb-2 flex items-center gap-2">
+                                  <h3 className="text-xl">{plan.name}</h3>
+                                  {isSelected && (
+                                    <span className="rounded-full bg-primary px-2.5 py-1 text-xs text-primary-foreground">
+                                      Atual
+                                    </span>
+                                  )}
+                                  {isRequested && (
+                                    <span className="rounded-full bg-warning px-2.5 py-1 text-xs text-warning-foreground">
+                                      Em análise
+                                    </span>
+                                  )}
+                                  {isApprovedRequest && (
+                                    <span className="rounded-full bg-success px-2.5 py-1 text-xs text-success-foreground">
+                                      Aprovado
+                                    </span>
+                                  )}
+                                  {isRejectedRequest && (
+                                    <span className="rounded-full bg-destructive px-2.5 py-1 text-xs text-destructive-foreground">
+                                      Recusado
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                              </div>
+
+                              <div
+                                className={`mt-1 flex size-7 shrink-0 items-center justify-center rounded-full border ${
+                                  isSelected
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : isRequested
+                                      ? 'border-warning bg-warning text-warning-foreground'
+                                    : 'border-border text-transparent'
+                                }`}
+                              >
+                                <Check className="size-4" />
+                              </div>
+                            </div>
+
+                            <div className="mb-4 flex items-end justify-between gap-4">
+                              <div>
+                                <p className="text-3xl">{formatCurrency(plan.monthlyPrice)}</p>
+                                <p className="text-sm text-muted-foreground">por mês</p>
+                              </div>
+
+                              <div className="text-right text-sm text-muted-foreground">
+                                <p>{plan.features.length} recursos incluídos</p>
+                                <p>{agency.name}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {plan.features.map((feature) => (
+                                <span
+                                  key={feature}
+                                  className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground"
+                                >
+                                  {feature}
+                                </span>
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -263,6 +412,47 @@ export function AccountSettingsPage() {
       </div>
 
       <BottomNav />
+
+      <AlertDialog open={pendingPlanRequest !== null} onOpenChange={(open) => !open && setPendingPlanRequest(null)}>
+        <AlertDialogContent className="max-w-[calc(100%-2rem)] rounded-[2rem] border-border p-6">
+          <AlertDialogHeader className="text-left">
+            <AlertDialogTitle className="text-2xl leading-tight">Confirmar solicitação</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-6">
+              {pendingPlanRequest
+                ? `Deseja realmente solicitar a alteração para o plano ${pendingPlanRequest.planName} na ${pendingPlanRequest.agencyName}?`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="w-full sm:w-auto" onClick={handleConfirmPlanRequest}>
+              Confirmar solicitação
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={planRequestDialog !== null} onOpenChange={(open) => !open && setPlanRequestDialog(null)}>
+        <DialogContent className="overflow-hidden rounded-[2rem] border-border p-0">
+          <div className="px-6 py-6">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-2xl leading-tight">Solicitação enviada</DialogTitle>
+              <DialogDescription className="text-sm leading-6">
+                {planRequestDialog
+                  ? `A solicitação para alterar o plano para ${planRequestDialog.planName} na ${planRequestDialog.agencyName} está sendo enviada para análise da imobiliária.`
+                  : ''}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-6">
+              <Button className="w-full" size="lg" onClick={() => setPlanRequestDialog(null)}>
+                Entendi
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
